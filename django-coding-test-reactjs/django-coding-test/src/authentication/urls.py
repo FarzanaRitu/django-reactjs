@@ -12,5 +12,5 @@ urlpatterns = [
         authentication_form=LoginForm
     ), name='login'),
     path('logout/', auth_views.LogoutView.as_view(template_name='login.html'), name='logout'),
-    path('dashboard/', DashboardView.as_view(), name='dashboard')
+    path('dashboard', DashboardView.as_view(), name='dashboard')
 ]

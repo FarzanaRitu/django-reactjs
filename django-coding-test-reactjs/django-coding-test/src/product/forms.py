@@ -1,6 +1,8 @@
-from django import forms
-from django.forms import ModelForm, TextInput, Textarea, CheckboxInput
-from product.models import Variant, ProductVariant
+from django.forms import forms, ModelForm, CharField, TextInput, Textarea, BooleanField, CheckboxInput
+
+from product.models import Variant,  Product, ProductVariant
+
+
 
 class VariantForm(ModelForm):
     class Meta:
@@ -12,6 +14,8 @@ class VariantForm(ModelForm):
             'active': CheckboxInput(attrs={'class': 'form-check-input', 'id': 'active'})
         }
 
+
+from django import forms
 class ProductForm(forms.Form):
     product_title = forms.CharField(
         label='Product Title',
@@ -27,10 +31,20 @@ class ProductForm(forms.Form):
         label='Description',
         widget=forms.Textarea(attrs={'class': 'form-control'})
     )
-    variant_input = forms.CharField(
-        label='Variant Input',
-        max_length=200,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'id': 'variantInput'})
+    variant_color = forms.CharField(
+        label='Color',
+        max_length=100,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    variant_style = forms.CharField(
+        label='Style',
+        max_length=100,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    variant_size = forms.CharField(
+        label='Size',
+        max_length=100,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
     )
     price = forms.DecimalField(
         label='Price',
@@ -49,7 +63,18 @@ class ProductForm(forms.Form):
             raise forms.ValidationError('A product with this SKU already exists.')
         return sku
 
-    def clean_variant_input(self):
-        variant_input = self.cleaned_data.get('variant_input')
-        if ProductVariant.objects.filter(variant_title=variant_input).exists():
-            raise forms.ValidationError
+    def clean(self):
+        cleaned_data = super().clean()
+        sku = cleaned_data.get('sku')
+        product_title = cleaned_data.get('product_title')
+        variant_color = cleaned_data.get('variant_color')
+        variant_style = cleaned_data.get('variant_style')
+        variant_size = cleaned_data.get('variant_size')
+
+        variant_input = f"{variant_color}-{variant_style}-{variant_size}"
+        cleaned_data['variant_input'] = variant_input
+
+        if Product.objects.filter(sku=sku).exists():
+            self.add_error('sku', 'A product with this SKU already exists.')
+        
+        return cleaned_data

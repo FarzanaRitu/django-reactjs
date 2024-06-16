@@ -5,8 +5,12 @@ from django.core.paginator import Paginator
 from product.models import Variant, Product, ProductImage, ProductVariant, ProductVariantPrice
 from django.views import View
 from django.db.models import Q
-from product.forms import ProductForm
+from ..forms import ProductForm
 from django.db import IntegrityError
+
+from django.http import JsonResponse
+from django.views import View
+
 
 
 class ListProductView(View):
@@ -55,15 +59,15 @@ class EditProductView(View):
             variant = ProductVariant.objects.filter(product=product).first()
             if not variant:
                 variant = ProductVariant(product=product)
-                variant.variant_title = form.cleaned_data['variant_input']
-                variant.save()
+            variant.variant_title = form.cleaned_data['variant_input']
+            variant.save()
 
-                variant_price = ProductVariantPrice.objects.filter(product=product).first()
+            variant_price = ProductVariantPrice.objects.filter(product=product).first()
             if not variant_price:
                 variant_price = ProductVariantPrice(product=product, product_variant_one=variant)
-                variant_price.price = form.cleaned_data['price']
-                variant_price.stock = form.cleaned_data['stock']
-                variant_price.save()
+            variant_price.price = form.cleaned_data['price']
+            variant_price.stock = form.cleaned_data['stock']
+            variant_price.save()
 
               # Redirect to the product list view
             products = Product.objects.all()
@@ -80,75 +84,91 @@ class EditProductView(View):
         return render(request, self.template_name, {'form': form, 'product': product})
 
         
-
 class CreateProductView(View):
     create_template = 'products/create.html'
 
     def get(self, request):
         form = ProductForm()
-        return render(request, self.create_template, {'form': form, 'product': True, 'variants': Variant.objects.filter(active=True)})
-
-    def post(self, request):
-        form = ProductForm(request.POST)
-        if form.is_valid():
-            try:
-                product = Product(
-                    product_title=form.cleaned_data['product_title'],
-                    sku=form.cleaned_data['sku'],
-                    product_description=form.cleaned_data['product_description']
-                )
-                product.save()
-
-                variant = Variant(
-                    title=request.POST.get('variant_color', ''),
-                    description=request.POST.get('variant_style', ''),
-                    active=True
-                )
-                variant.save()
-
-                product_variant = ProductVariant(
-                    variant_title=request.POST.get('variant_input', ''),
-                    variant=variant,
-                    product=product
-                )
-                product_variant.save()
-
-                product_variant_price = ProductVariantPrice(
-                    product_variant_one=product_variant,
-                    price=form.cleaned_data['price'],
-                    stock=form.cleaned_data['stock'],
-                    product=product
-                )
-                product_variant_price.save()
-                
-                # Reset the form
-                form = ProductForm()
-                return render(request, self.create_template, {
-                    'form': form,
-                    'product': True,
-                    'variants': Variant.objects.filter(active=True),
-                    'success_message': 'Product created successfully!'
-                })
-
-            except IntegrityError:
-                form.add_error(None, 'A product with this SKU or a product variant with this title already exists.')
-        
         return render(request, self.create_template, {
             'form': form,
             'product': True,
             'variants': Variant.objects.filter(active=True)
         })
+
+    def post(self, request):
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            try:
+                product_title = form.cleaned_data['product_title']
+                sku = form.cleaned_data['sku']
+                product_description = form.cleaned_data['product_description']
+                variant_input = form.cleaned_data['variant_input']
+                price = form.cleaned_data['price']
+                stock = form.cleaned_data['stock']
+
+                product = Product.objects.create(
+                    product_title=product_title,
+                    sku=sku,
+                    product_description=product_description
+                )
+
+                variant, created = Variant.objects.get_or_create(
+                    title=variant_input,
+                    defaults={'description': f"{request.POST.get('variant_style', '')} - {request.POST.get('variant_size', '')}", 'active': True}
+                )
+
+                if ProductVariant.objects.filter(variant_title=variant_input, product=product).exists():
+                    form.add_error('variant_input', 'A variant with this combination already exists for this product.')
+                    return render(request, self.create_template, {
+                        'form': form,
+                        'product': True,
+                        'variants': Variant.objects.filter(active=True)
+                    })
+
+                product_variant = ProductVariant.objects.create(
+                    variant_title=variant_input,
+                    variant=variant,
+                    product=product
+                )
+
+                ProductVariantPrice.objects.create(
+                    product_variant_one=product_variant,
+                    price=price,
+                    stock=stock,
+                    product=product
+                )
+
+                form = ProductForm()
+                success_message = 'Product created successfully!'
+                return render(request, self.create_template, {
+                    'form': form,
+                    'product': True,
+                    'variants': Variant.objects.filter(active=True),
+                    'success_message': success_message
+                })
+
+            except IntegrityError:
+                form.add_error(None, 'An error occurred while saving the product. Please check your input and try again.')
+
+        return render(request, self.create_template, {
+            'form': form,
+            'product': True,
+            'variants': Variant.objects.filter(active=True)
+        })
+from django.shortcuts import render
+from django.views import View
+from django.core.paginator import Paginator
+from product.models import Product, ProductVariant, ProductVariantPrice
+
 class FilterProductView(View):
     filter_template = 'products/filter.html'
     list_template = 'products/list.html'
 
     def get(self, request):
         variants = ProductVariant.objects.all()
-        
         context = {
-            'variants': variants
+            'variants': variants,
         }
-        
         return render(request, self.filter_template, context)
 
     def post(self, request):
@@ -160,12 +180,15 @@ class FilterProductView(View):
         price_from = request.POST.get('price_from')
         price_to = request.POST.get('price_to')
 
-        # Apply filters
+        # Apply filters independently
         if product_title:
             products = products.filter(product_title__icontains=product_title)
+            print(f"Filtered by product title: {products}")
 
         if variant_title and variant_title != " -- Select a Variant --":
-            products = products.filter(productvariant__variant_title__icontains=variant_title).distinct()
+            product_ids = ProductVariant.objects.filter(variant_title__icontains=variant_title).values_list('product_id', flat=True)
+            products = products.filter(id__in=product_ids)
+            print(f"Filtered by variant title: {products}")
 
         if price_from or price_to:
             try:
@@ -175,11 +198,12 @@ class FilterProductView(View):
                     price__gte=price_from, price__lte=price_to
                 ).values_list('product_id', flat=True)
                 products = products.filter(id__in=product_ids)
+                print(f"Filtered by price range: {products}")
             except ValueError:
                 pass  # Handle invalid price range input
 
         # Implement pagination
-        paginator = Paginator(products, 10)  # Show 10 products per page
+        paginator = Paginator(products, 5)  # Show 5 products per page
         page_number = request.GET.get('page')
         page_obj = paginator.get_page(page_number)
 
@@ -192,4 +216,5 @@ class FilterProductView(View):
             'price_to': price_to,
         }
 
+        print(f"Final products count: {page_obj.object_list.count()}")
         return render(request, self.list_template, context)
