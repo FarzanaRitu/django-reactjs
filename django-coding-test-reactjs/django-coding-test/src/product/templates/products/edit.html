@@ -1,0 +1,22 @@
+{% extends 'backend/base.html' %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Edit Product</title>
+</head>
+<body>
+    {% block content %}
+    <div class="container mt-5" style="margin-left: 235px;">
+        <h2>Edit Product</h2>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Save changes</button>
+        </form>
+    </div>
+    {% endblock %}
+</body>
+</html>

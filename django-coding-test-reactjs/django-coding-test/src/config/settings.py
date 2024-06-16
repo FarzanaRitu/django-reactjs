@@ -25,6 +25,7 @@ SECRET_KEY = 'django-insecure-x2@^g(at5$x^ovkf!3fna_z6%pn7^76h&khzm5o3%sskw-_i6a
 DEBUG = True
 
 ALLOWED_HOSTS = []
+APPEND_SLASH = False
 
 # Application definition
 
@@ -38,7 +39,8 @@ INSTALLED_APPS = [
     'django_extensions',
     'rest_framework',
     'authentication',
-    'product'
+    'product',
+     
 ]
 
 MIDDLEWARE = [
@@ -119,10 +121,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
-STATIC_URL = '/static/'
 STATICFILES_DIRS = [
-    BASE_DIR / 'static'
+    BASE_DIR / "static",
+    '/var/www/static/',
 ]
+STATIC_URL = '/static/'
 
 MEDIA_URL = '/media/'
 

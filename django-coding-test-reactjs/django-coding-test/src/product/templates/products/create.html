@@ -1,21 +1,86 @@
-{% extends 'backend/base.html' %}
 
-{% block title %} Create Product {% endblock %}
-
-{% block content %}
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Create Product</h1>
-        <a href="{% url 'product:create.product' %}" class="float-right btn btn-primary">All Product</a>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Product</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body> 
+<div class="container mt-5">
+    <h2>Create Product</h2>
+    {% if success_message %}
+    <div class="alert alert-success" role="alert">
+        {{ success_message }}
     </div>
+    {% endif %}
+    <form method="post" id="productForm">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="variantColor">Color</label>
+            <select id="variantColor" class="form-control" name="variant_color">
+                <option value="">Select Color</option>
+                <option value="Red">Red</option>
+                <option value="Black">Black</option>
+                <option value="Green">Green</option>
+                <option value="Yellow">Yellow</option>
+                <option value="Pink">Pink</option>
+                <option value="Orange">Orange</option>
+                <option value="Cyan">Cyan</option>
+                <option value="Violet">Violet</option>
+                <option value="Navy Blue">Navy Blue</option>
+                <option value="Sky Blue">Sky Blue</option>
+                <option value="Gray">Gray</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="variantStyle">Style</label>
+            <select id="variantStyle" class="form-control" name="variant_style">
+                <option value="">Select Style</option>
+                <option value="Full Sleeve">Full Sleeve</option>
+                <option value="Half Sleeve">Half Sleeve</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="variantSize">Size</label>
+            <select id="variantSize" class="form-control" name="variant_size">
+                <option value="">Select Size</option>
+                <option value="S">S</option>
+                <option value="M">M</option>
+                <option value="L">L</option>
+                <option value="XL">XL</option>
+                <option value="XXL">XXL</option>
+                <option value="XXXL">XXXL</option>
+            </select>
+        </div>
+        {{ form.as_p }}
+        <input type="hidden" id="variantInput" name="variant_input" value="{{ form.variant_input.value }}">
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+</div>
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    $(document).ready(function() {
+        function updateVariantInput() {
+            let color = $('#variantColor').val();
+            let style = $('#variantStyle').val();
+            let size = $('#variantSize').val();
+            let variantInput = color + ' ' + style + ' ' + size;
+            $('#variantInput').val(variantInput.trim());
+        }
 
+        $('#variantColor, #variantStyle, #variantSize').change(function() {
+            updateVariantInput();
+        });
 
-    <script>
-    var varients = {{ variants|safe }}
-    console.log(typeof varients)
-    </script>
-
-    <div id="root">
-        <CreateProduct id="variants" data-variants="{{ variants|safe }}"></CreateProduct>
-    </div>
-
-{% endblock %}
+        $('#productForm').submit(function(e) {
+            updateVariantInput();
+        });
+    });
+</script>
+</body>
+</html>
